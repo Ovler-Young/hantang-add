@@ -6,12 +6,13 @@ conn = st.connection("mysql", type="sql")
 
 st.header("Add Video")
 
-st.input("BV ID", key="bv_id")
+# input video bv_id
+bv_id = st.text_input("Video BV ID")
 
 st.button("Add Video", key="add_video")
 
 video_info = requests.get(
-    f"https://api.bilibili.com/x/web-interface/view?bvid={st.session_state.bv_id}"
+    f"https://api.bilibili.com/x/web-interface/view?bvid={bv_id}"
 ).json()
 
 # display video info
