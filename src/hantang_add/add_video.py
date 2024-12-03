@@ -2,6 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import re
+import time
 from wbi import encWbi, getWbiKeys
 
 st.header("Add Video")
@@ -125,5 +126,15 @@ if add_video:
     
     # Reset input fields by updating session state
     st.session_state.clear_form = True
+    
+    col1, col2 = st.columns([4,1], vertical_alignment='bottom')
+    with col2:
+        if st.button("Refresh now"):
+            st.stop()
+    with col1:
+        with st.empty():
+            for seconds in range(10):
+                st.success(f"⏳ Page will refresh in {10 - seconds} seconds.")
+                time.sleep(1)
     
     st.rerun()
