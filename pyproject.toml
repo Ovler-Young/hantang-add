@@ -5,7 +5,7 @@ description = "Default template for PDM package"
 authors = [
     {name = "Ovler", email = "ovlertheyoung@gmail.com"},
 ]
-dependencies = ["streamlit>=1.40.2", "SQLAlchemy>=2.0.36", "requests>=2.32.3", "mysqlclient>=2.2.6"]
+dependencies = ["streamlit>=1.40.2", "SQLAlchemy>=2.0.36", "requests>=2.32.3", "pymysql>=1.1.1"]
 requires-python = "==3.12.*"
 readme = "README.md"
 license = {text = "Apache-2.0"}
