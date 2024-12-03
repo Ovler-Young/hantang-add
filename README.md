@@ -17,6 +17,8 @@ password = "your_password"
 
 1. 前往 [streamlit.io](https://share.streamlit.io/deploy)，进行部署（可能需要注册其账号）。
 
+   仓库是 `icedata-top/hantang-add`
+
    注意 `Main file path` 为 `src\hantang-add\add_video.py`
 
    可以自己修改App Url，默认是不公开的。
