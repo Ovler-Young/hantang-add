@@ -5,13 +5,24 @@ from wbi import encWbi, getWbiKeys
 
 st.header("Add Video")
 
+if 'clear_form' in st.session_state:
+    st.session_state.bv_id = ''
+    st.session_state.av_id = ''
+    del st.session_state.clear_form
+
 col1, col2 = st.columns(2)
 
 with col1:
-    bv_id = st.text_input("Video BV ID", placeholder="format: BV[0-9a-zA-Z]{10}", value="")
+    bv_id = st.text_input("Video BV ID", 
+                         placeholder="format: BV[0-9a-zA-Z]{10}", 
+                         key='bv_id',
+                         value=st.session_state.get('bv_id', ''))
 
 with col2:
-    av_id = st.text_input("Video AV ID", placeholder="format: [0-9]+ / av[0-9]+", value="")
+    av_id = st.text_input("Video AV ID",
+                         placeholder="format: [0-9]+ / av[0-9]+",
+                         key='av_id', 
+                         value=st.session_state.get('av_id', ''))
 
 if not bv_id and not av_id:
     st.markdown(
@@ -113,3 +124,8 @@ if add_video:
         st.success("Video already exists in database.")
 
     st.table(current.T)
+    
+    # Reset input fields by updating session state
+    st.session_state.clear_form = True
+    
+    st.rerun()
