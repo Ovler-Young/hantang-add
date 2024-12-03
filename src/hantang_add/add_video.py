@@ -14,6 +14,9 @@ with col2:
     av_id = st.text_input("Video AV ID", placeholder="format: [0-9]+ / av[0-9]+", value="")
 
 if not bv_id and not av_id:
+    st.markdown(
+        "Please input a valid BV or AV ID. And don't forget to press enter to submit."
+    )
     st.stop()
 
 # Handle BV ID input
