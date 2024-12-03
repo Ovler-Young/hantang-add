@@ -14,7 +14,7 @@ col1, col2 = st.columns(2)
 
 with col1:
     bv_id = st.text_input("Video BV ID", 
-                         placeholder="format: BV[0-9a-zA-Z]{10}", 
+                         placeholder="format: BV[0-9a-zA-Z]{10} URL also works", 
                          key='bv_id',
                          value=st.session_state.get('bv_id', ''))
 
