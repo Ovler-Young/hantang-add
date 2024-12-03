@@ -1,11 +1,23 @@
 import streamlit as st
 import requests
+import re
 from wbi import encWbi, getWbiKeys
 
 st.header("Add Video")
 
 # input video bv_id
 bv_id = st.text_input("Video BV ID")
+
+if not bv_id:
+    st.stop()
+
+bv_id = re.search(r"BV[0-9a-zA-Z]{10}", bv_id)
+
+if not bv_id:
+    st.warning("Invalid BV ID.")
+    st.stop()
+else:
+    bv_id = bv_id.group(0)
 
 st.write(
     f'<iframe src="//player.bilibili.com/player.html?bvid={bv_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width:100%;height:500px"> </iframe>',
