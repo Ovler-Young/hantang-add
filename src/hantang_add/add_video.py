@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import requests
 import re
 from wbi import encWbi, getWbiKeys
@@ -20,7 +21,7 @@ with col1:
 
 with col2:
     av_id = st.text_input("Video AV ID",
-                         placeholder="format: [0-9]+ / av[0-9]+",
+                         placeholder="format: [0-9]+ / av[0-9]+ URL also works",
                          key='av_id', 
                          value=st.session_state.get('av_id', ''))
 
@@ -50,10 +51,7 @@ elif av_id:
         st.warning("Invalid AV ID.")
         st.stop()
 
-st.write(
-    f'<iframe src="//player.bilibili.com/player.html?{player_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width:100%;height:500px"> </iframe>',
-    unsafe_allow_html=True,
-)
+components.iframe(f"https://player.bilibili.com/player.html?{player_id}", height=400)
 
 # Update signed params based on ID type
 img_key, sub_key = getWbiKeys()
