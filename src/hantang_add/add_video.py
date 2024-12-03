@@ -8,7 +8,7 @@ st.header("Add Video")
 bv_id = st.text_input("Video BV ID")
 
 st.write(
-    f'<iframe src="//player.bilibili.com/player.html?bvid={bv_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>',
+    f'<iframe src="//player.bilibili.com/player.html?bvid={bv_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width:100%;height:500px"> </iframe>',
     unsafe_allow_html=True,
 )
 
