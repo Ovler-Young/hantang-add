@@ -7,24 +7,28 @@ from wbi import encWbi, getWbiKeys
 
 st.header("Add Video")
 
-if 'clear_form' in st.session_state:
-    st.session_state.bv_id = ''
-    st.session_state.av_id = ''
+if "clear_form" in st.session_state:
+    st.session_state.bv_id = ""
+    st.session_state.av_id = ""
     del st.session_state.clear_form
 
 col1, col2 = st.columns(2)
 
 with col1:
-    bv_id = st.text_input("Video BV ID", 
-                         placeholder="format: BV[0-9a-zA-Z]{10} URL also works", 
-                         key='bv_id',
-                         value=st.session_state.get('bv_id', ''))
+    bv_id = st.text_input(
+        "Video BV ID",
+        placeholder="format: BV[0-9a-zA-Z]{10} URL also works",
+        key="bv_id",
+        value=st.session_state.get("bv_id", ""),
+    )
 
 with col2:
-    av_id = st.text_input("Video AV ID",
-                         placeholder="format: [0-9]+ / av[0-9]+ URL also works",
-                         key='av_id', 
-                         value=st.session_state.get('av_id', ''))
+    av_id = st.text_input(
+        "Video AV ID",
+        placeholder="format: [0-9]+ / av[0-9]+ URL also works",
+        key="av_id",
+        value=st.session_state.get("av_id", ""),
+    )
 
 if not bv_id and not av_id:
     st.markdown(
@@ -123,11 +127,11 @@ if add_video:
         st.success("Video already exists in database.")
 
     st.table(current.T)
-    
+
     # Reset input fields by updating session state
     st.session_state.clear_form = True
-    
-    col1, col2 = st.columns([4,1], vertical_alignment='bottom')
+
+    col1, col2 = st.columns([4, 1], vertical_alignment="bottom")
     with col2:
         if st.button("Refresh now"):
             st.stop()
@@ -136,5 +140,5 @@ if add_video:
             for seconds in range(10):
                 st.success(f"⏳ Page will refresh in {10 - seconds} seconds.")
                 time.sleep(1)
-    
+
     st.rerun()
