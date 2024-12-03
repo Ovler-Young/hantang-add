@@ -5,30 +5,46 @@ from wbi import encWbi, getWbiKeys
 
 st.header("Add Video")
 
-# input video bv_id
-bv_id = st.text_input("Video BV ID")
+col1, col2 = st.columns(2)
 
-if not bv_id:
+with col1:
+    bv_id = st.text_input("Video BV ID", placeholder="format: BV[0-9a-zA-Z]{10}", value="")
+
+with col2:
+    av_id = st.text_input("Video AV ID", placeholder="format: [0-9]+ / av[0-9]+", value="")
+
+if not bv_id and not av_id:
     st.stop()
 
-bv_id = re.search(r"BV[0-9a-zA-Z]{10}", bv_id)
-
-if not bv_id:
-    st.warning("Invalid BV ID.")
-    st.stop()
-else:
-    bv_id = bv_id.group(0)
+# Handle BV ID input
+if bv_id:
+    bv_match = re.search(r"BV[0-9a-zA-Z]{10}", bv_id)
+    if bv_match:
+        video_id = bv_match.group(0)
+        param_key = "bvid"
+        player_id = f"bvid={video_id}"
+    else:
+        st.warning("Invalid BV ID.")
+        st.stop()
+elif av_id:
+    av_match = re.search(r"[0-9]+", av_id.lower())
+    if av_match:
+        video_id = av_match.group(0)
+        param_key = "aid"
+        player_id = f"aid={video_id}"
+    else:
+        st.warning("Invalid AV ID.")
+        st.stop()
 
 st.write(
-    f'<iframe src="//player.bilibili.com/player.html?bvid={bv_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width:100%;height:500px"> </iframe>',
+    f'<iframe src="//player.bilibili.com/player.html?{player_id}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width:100%;height:500px"> </iframe>',
     unsafe_allow_html=True,
 )
 
-
-# Get wbi keys
+# Update signed params based on ID type
 img_key, sub_key = getWbiKeys()
-# sign params
-signed_params = encWbi(params={"bvid": bv_id}, img_key=img_key, sub_key=sub_key)
+signed_params = encWbi(params={param_key: video_id}, img_key=img_key, sub_key=sub_key)
+
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "Referer": "https://www.bilibili.com/",
