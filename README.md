@@ -7,6 +7,7 @@
 ```toml
 [connections.mysql]
 dialect = "mysql"
+driver = "pymysql"
 host = "localhost"
 port = 3306
 database = "xxx"
