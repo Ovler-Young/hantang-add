@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:0ea111f24aa22147f5ab72b71615a4e31ad7f70e28ae839e43f57d80f990d2d5"
+content_hash = "sha256:cd5ea72c1eaa3418e8d9b63b3a392d2eecf476f4955296a0a35b60a5522fbbbf"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -278,6 +278,17 @@ groups = ["default"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
+]
+
+[[package]]
+name = "mysqlclient"
+version = "2.2.6"
+requires_python = ">=3.8"
+summary = "Python interface to MySQL"
+groups = ["default"]
+files = [
+    {file = "mysqlclient-2.2.6-cp312-cp312-win_amd64.whl", hash = "sha256:e940b41d85dfd7b190fa47d52f525f878cfa203d4653bf6a35b271b3c3be125b"},
+    {file = "mysqlclient-2.2.6.tar.gz", hash = "sha256:c0b46d9b78b461dbb62482089ca8040fa916595b1b30f831ebbd1b0a82b43d53"},
 ]
 
 [[package]]
