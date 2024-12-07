@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+from sqlalchemy import text
 import requests
 import re
 import time
@@ -97,31 +98,27 @@ add_video = st.button("Add Video", key="add_video")
 if add_video:
     conn = st.connection("mysql", type="sql")
 
-    query = "SELECT * FROM video_static WHERE aid = '{}' OR bvid = '{}'".format(
-        video_data["aid"], video_data["bvid"]
+    # Use plain string for query
+    query = "SELECT * FROM video_static WHERE aid = :aid OR bvid = :bvid"
+    current = conn.query(
+        query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
     )
 
-    current = conn.query(query, ttl=0)
-
     if len(current) == 0:
-        query_str = "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id) VALUES ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}')".format(
-            video_data["aid"],
-            video_data["bvid"],
-            video_data["pubdate"],
-            video_data["title"],
-            video_data["description"],
-            video_data["tag"],
-            video_data["pic"],
-            video_data["type_id"],
-            video_data["user_id"],
+        dbsession = conn.session
+
+        dbsession.execute(
+            text(
+                "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id) "
+                "VALUES (:aid, :bvid, :pubdate, :title, :description, :tag, :pic, :type_id, :user_id)"
+            ),
+            video_data,
         )
+        dbsession.commit()
 
-        insert = conn.query(query_str)
-
-        st.success("Video inserted.")
-
-        # Test if the video is in db
-        current = conn.query(query, ttl=0)
+        current = conn.query(
+            query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
+        )
         st.success("Video added successfully.")
     else:
         st.success("Video already exists in database.")
