@@ -48,16 +48,3 @@ def getWbiKeys() -> tuple[str, str]:
     return img_key, sub_key
 
 img_key, sub_key = getWbiKeys()
-
-signed_params = encWbi(
-    params={
-        'foo': '114',
-        'bar': '514',
-        'baz': 1919810
-    },
-    img_key=img_key,
-    sub_key=sub_key
-)
-query = urllib.parse.urlencode(signed_params)
-print(signed_params)
-print(query)
