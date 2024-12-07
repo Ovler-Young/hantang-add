@@ -93,36 +93,34 @@ video_data = {
 
 st.table(video_data)
 
-add_video = st.button("Add Video", key="add_video")
+conn = st.connection("mysql", type="sql")
+query = "SELECT * FROM video_static WHERE aid = :aid OR bvid = :bvid"
+current = conn.query(
+    query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
+)
+if len(current) > 0:
+    st.success("Video already exists in database.")
+    st.table(current.T)
+else:
+    add_video = st.button("Add Video", key="add_video")
 
-if add_video:
-    conn = st.connection("mysql", type="sql")
+    if not add_video:
+        st.stop()
 
-    # Use plain string for query
-    query = "SELECT * FROM video_static WHERE aid = :aid OR bvid = :bvid"
+    dbsession = conn.session
+    dbsession.execute(
+        text(
+            "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id) "
+            "VALUES (:aid, :bvid, :pubdate, :title, :description, :tag, :pic, :type_id, :user_id)"
+        ),
+        video_data,
+    )
+    dbsession.commit()
+
     current = conn.query(
         query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
     )
-
-    if len(current) == 0:
-        dbsession = conn.session
-
-        dbsession.execute(
-            text(
-                "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id) "
-                "VALUES (:aid, :bvid, :pubdate, :title, :description, :tag, :pic, :type_id, :user_id)"
-            ),
-            video_data,
-        )
-        dbsession.commit()
-
-        current = conn.query(
-            query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
-        )
-        st.success("Video added successfully.")
-    else:
-        st.success("Video already exists in database.")
-
+    st.success("Video added successfully.")
     st.table(current.T)
 
     # Reset input fields by updating session state
