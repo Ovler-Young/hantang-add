@@ -102,6 +102,23 @@ if len(current) > 0:
     st.success("Video already exists in database.")
     st.table(current.T)
 else:
+    priority_options = {
+        "N/A": None,
+        "Every minute": 1, 
+        "Every 15 minutes": 15,
+        "Every hour": 60
+    }
+
+    priority = st.selectbox(
+        "Update frequency",
+        options=list(priority_options.keys()),
+        index=0,
+        help="How often to automatically check for video updates"
+    )
+
+    # Add priority to video_data dict:
+    video_data["priority"] = priority_options[priority]
+
     add_video = st.button("Add Video", key="add_video")
 
     if not add_video:
@@ -110,8 +127,8 @@ else:
     dbsession = conn.session
     dbsession.execute(
         text(
-            "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id) "
-            "VALUES (:aid, :bvid, :pubdate, :title, :description, :tag, :pic, :type_id, :user_id)"
+            "INSERT INTO video_static (aid, bvid, pubdate, title, description, tag, pic, type_id, user_id, priority) "
+            "VALUES (:aid, :bvid, :pubdate, :title, :description, :tag, :pic, :type_id, :user_id, :priority)"
         ),
         video_data,
     )
