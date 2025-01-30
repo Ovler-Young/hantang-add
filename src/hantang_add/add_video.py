@@ -110,10 +110,10 @@ if len(current) > 0:
     aid = current.iloc[0]["aid"]
 
     if priority is not None:
-        query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time"
+        query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time LIMIT 1000"
         table_type = "Minute"
     else:
-        query = "SELECT * FROM video_dynamic WHERE aid = :aid ORDER BY record_date"
+        query = "SELECT * FROM video_dynamic WHERE aid = :aid ORDER BY record_date LIMIT 1000"
         table_type = "Dynamic"
 
     df = conn.query(query, params={"aid": aid}, ttl=0)
