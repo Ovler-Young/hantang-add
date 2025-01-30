@@ -146,6 +146,12 @@ if len(current) > 0:
         ]
         plot_df = df[plot_columns].set_index("datetime")
 
+        if table_type == "Minute":
+            time_diff = plot_df.index.to_series().diff().dt.total_seconds().div(60)
+        else:
+            time_diff = plot_df.index.to_series().diff().dt.days
+
+        time_diff = time_diff.fillna(method='bfill')        
         # Create Plotly figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
@@ -196,10 +202,25 @@ if len(current) > 0:
         view_min = float("inf")
 
         for col in plot_df.columns:
-            diff = plot_df[col].diff().fillna(0)            
-            ma = diff.rolling(window=6).quantile(0.5).interpolate()
-
+            diff = plot_df[col].diff().fillna(0)
+            rate = diff / time_diff.replace(0, 1)
+            ma = rate.rolling(window=6).quantile(0.5).interpolate()
             if col == "view":
+                fig2.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=rate,
+                        name=f"{col} raw",
+                        marker=dict(
+                            color=colors["view"], 
+                            size=2,  # 点的大小
+                            opacity=0.8  # 半透明
+                        ),
+                        mode="markers",
+                    ),
+                    secondary_y=True,
+                )
+                # 添加平滑曲线（保持原有代码）
                 fig2.add_trace(
                     go.Scatter(
                         x=plot_df.index,
@@ -214,6 +235,21 @@ if len(current) > 0:
                 view_max = max(view_max, ma.max())
                 view_min = min(view_min, ma.min())
             else:
+                fig2.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=rate,
+                        name=f"{col} raw",
+                        marker=dict(
+                            color=colors[col], 
+                            size=2,
+                            opacity=0.8
+                        ),
+                        mode="markers",
+                    ),
+                    secondary_y=False,
+                )
+                # 添加平滑曲线（保持原有代码）
                 fig2.add_trace(
                     go.Scatter(
                         x=plot_df.index,
