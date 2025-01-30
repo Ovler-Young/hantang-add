@@ -180,9 +180,17 @@ if len(current) > 0:
 
         # Create new figure for growth (derivative) lines
         fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Initialize variables to track max and min values for both axes
+        current_max = -float('inf')
+        current_min = float('inf')
+        view_max = -float('inf')
+        view_min = float('inf')
+
         for col in plot_df.columns:
             diff = plot_df[col].diff().interpolate()
             ma = diff.rolling(window=5).mean()
+            
             if col == 'view':
                 fig2.add_trace(
                     go.Scatter(
@@ -194,6 +202,9 @@ if len(current) > 0:
                     ),
                     secondary_y=True,
                 )
+                # Update view axis ranges based on MA values
+                view_max = max(view_max, ma.max())
+                view_min = min(view_min, ma.min())
             else:
                 fig2.add_trace(
                     go.Scatter(
@@ -205,16 +216,27 @@ if len(current) > 0:
                     ),
                     secondary_y=False,
                 )
+                # Update primary axis ranges based on MA values
+                current_max = max(current_max, ma.max())
+                current_min = min(current_min, ma.min())
+
+        # Update y-axis ranges considering both datasets
+        fig2.update_yaxes(
+            range=[min(current_min, view_min / 10), max(current_max, view_max / 10)], 
+            secondary_y=False
+        )
+        fig2.update_yaxes(
+            range=[min(current_min * 10, view_min), max(current_max * 10, view_max)], 
+            secondary_y=True
+        )
+
         fig2.update_layout(
             title='Growth (Derivative) Over Time',
             xaxis_title='Date/Time',
             yaxis_title='Growth',
             hovermode='x unified'
         )
-        fig2.update_yaxes(rangemode="tozero", secondary_y=False)
-        fig2.update_yaxes(rangemode="tozero", secondary_y=True)
         st.plotly_chart(fig2, use_container_width=True)
-        
     else:
         st.info(f"No {table_type.lower()} data available for this video yet.")
         
