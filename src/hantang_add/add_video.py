@@ -1,4 +1,8 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit.components.v1 as components
 from sqlalchemy import text
 import requests
@@ -101,6 +105,119 @@ current = conn.query(
 if len(current) > 0:
     st.success("Video already exists in database.")
     st.table(current.T)
+    
+    priority = current.iloc[0]['priority']
+    aid = current.iloc[0]['aid']
+    
+    if priority is not None:
+        query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time"
+        table_type = "Minute"
+    else:
+        query = "SELECT * FROM video_dynamic WHERE aid = :aid ORDER BY record_date"
+        table_type = "Dynamic"
+    
+    df = conn.query(query, params={"aid": aid}, ttl=0)
+    
+    if not df.empty:
+        # Convert timestamp/date to datetime
+        if table_type == "Minute":
+            df['datetime'] = pd.to_datetime(df['time'], unit='s')
+            # Remove points that are <30s from the last data point
+            df = df.sort_values('datetime')
+            kept = []
+            last = None
+            for i, row in df.iterrows():
+                if last is None or (row['datetime'] - last).total_seconds() >= 20:
+                    kept.append(i)
+                    last = row['datetime']
+            df = df.loc[kept]
+        else:
+            df['datetime'] = pd.to_datetime(df['record_date'])
+        
+        # Prepare data for plotting
+        plot_columns = ['datetime', 'favorite', 'danmaku', 'reply', 'share', 'like', 'view']
+        plot_df = df[plot_columns].set_index('datetime')
+        
+        # Create Plotly figure with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        colors = {
+            'favorite': '#1f77b4',
+            'danmaku': '#ff7f0e',
+            'reply': '#2ca02c',
+            'share': '#d62728',
+            'like': '#9467bd',
+            'view': '#8c564b'
+        }
+
+        for col in plot_df.columns:
+            if col == 'view':
+                fig.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=plot_df['view'],
+                        name='view',
+                        line=dict(color=colors['view'], shape='spline'),
+                        mode='lines'
+                    ),
+                    secondary_y=True,
+                )
+            else:
+                fig.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=plot_df[col],
+                        name=col,
+                        line=dict(color=colors[col], shape='spline'),
+                        mode='lines'
+                    ),
+                    secondary_y=False,
+                )
+
+        fig.update_yaxes(rangemode="tozero", secondary_y=False)
+        fig.update_yaxes(rangemode="tozero", secondary_y=True)
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Create new figure for growth (derivative) lines
+        fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+        for col in plot_df.columns:
+            diff = plot_df[col].diff().interpolate()
+            ma = diff.rolling(window=5).mean()
+            if col == 'view':
+                fig2.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=ma,
+                        name=f'{col} growth (MA)',
+                        line=dict(color=colors['view']),
+                        mode='lines'
+                    ),
+                    secondary_y=True,
+                )
+            else:
+                fig2.add_trace(
+                    go.Scatter(
+                        x=plot_df.index,
+                        y=ma,
+                        name=f'{col} growth (MA)',
+                        line=dict(color=colors[col]),
+                        mode='lines'
+                    ),
+                    secondary_y=False,
+                )
+        fig2.update_layout(
+            title='Growth (Derivative) Over Time',
+            xaxis_title='Date/Time',
+            yaxis_title='Growth',
+            hovermode='x unified'
+        )
+        fig2.update_yaxes(rangemode="tozero", secondary_y=False)
+        fig2.update_yaxes(rangemode="tozero", secondary_y=True)
+        st.plotly_chart(fig2, use_container_width=True)
+        
+    else:
+        st.info(f"No {table_type.lower()} data available for this video yet.")
+        
 else:
     priority_options = {
         "N/A": None,
