@@ -105,60 +105,68 @@ current = conn.query(
 if len(current) > 0:
     st.success("Video already exists in database.")
     st.table(current.T)
-    
-    priority = current.iloc[0]['priority']
-    aid = current.iloc[0]['aid']
-    
+
+    priority = current.iloc[0]["priority"]
+    aid = current.iloc[0]["aid"]
+
     if priority is not None:
         query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time"
         table_type = "Minute"
     else:
         query = "SELECT * FROM video_dynamic WHERE aid = :aid ORDER BY record_date"
         table_type = "Dynamic"
-    
+
     df = conn.query(query, params={"aid": aid}, ttl=0)
-    
+
     if not df.empty:
         # Convert timestamp/date to datetime
         if table_type == "Minute":
-            df['datetime'] = pd.to_datetime(df['time'], unit='s')
+            df["datetime"] = pd.to_datetime(df["time"], unit="s")
             # Remove points that are <30s from the last data point
-            df = df.sort_values('datetime')
+            df = df.sort_values("datetime")
             kept = []
             last = None
             for i, row in df.iterrows():
-                if last is None or (row['datetime'] - last).total_seconds() >= 20:
+                if last is None or (row["datetime"] - last).total_seconds() >= 20:
                     kept.append(i)
-                    last = row['datetime']
+                    last = row["datetime"]
             df = df.loc[kept]
         else:
-            df['datetime'] = pd.to_datetime(df['record_date'])
-        
+            df["datetime"] = pd.to_datetime(df["record_date"])
+
         # Prepare data for plotting
-        plot_columns = ['datetime', 'favorite', 'danmaku', 'reply', 'share', 'like', 'view']
-        plot_df = df[plot_columns].set_index('datetime')
-        
+        plot_columns = [
+            "datetime",
+            "favorite",
+            "danmaku",
+            "reply",
+            "share",
+            "like",
+            "view",
+        ]
+        plot_df = df[plot_columns].set_index("datetime")
+
         # Create Plotly figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
         colors = {
-            'favorite': '#1f77b4',
-            'danmaku': '#ff7f0e',
-            'reply': '#2ca02c',
-            'share': '#d62728',
-            'like': '#9467bd',
-            'view': '#8c564b'
+            "favorite": "#1f77b4",
+            "danmaku": "#ff7f0e",
+            "reply": "#2ca02c",
+            "share": "#d62728",
+            "like": "#9467bd",
+            "view": "#8c564b",
         }
 
         for col in plot_df.columns:
-            if col == 'view':
+            if col == "view":
                 fig.add_trace(
                     go.Scatter(
                         x=plot_df.index,
-                        y=plot_df['view'],
-                        name='view',
-                        line=dict(color=colors['view'], shape='spline'),
-                        mode='lines'
+                        y=plot_df["view"],
+                        name="view",
+                        line=dict(color=colors["view"], shape="spline"),
+                        mode="lines",
                     ),
                     secondary_y=True,
                 )
@@ -168,8 +176,8 @@ if len(current) > 0:
                         x=plot_df.index,
                         y=plot_df[col],
                         name=col,
-                        line=dict(color=colors[col], shape='spline'),
-                        mode='lines'
+                        line=dict(color=colors[col], shape="spline"),
+                        mode="lines",
                     ),
                     secondary_y=False,
                 )
@@ -182,23 +190,23 @@ if len(current) > 0:
         fig2 = make_subplots(specs=[[{"secondary_y": True}]])
 
         # Initialize variables to track max and min values for both axes
-        current_max = -float('inf')
-        current_min = float('inf')
-        view_max = -float('inf')
-        view_min = float('inf')
+        current_max = -float("inf")
+        current_min = float("inf")
+        view_max = -float("inf")
+        view_min = float("inf")
 
         for col in plot_df.columns:
             diff = plot_df[col].diff().interpolate()
             ma = diff.rolling(window=5).mean()
-            
-            if col == 'view':
+
+            if col == "view":
                 fig2.add_trace(
                     go.Scatter(
                         x=plot_df.index,
                         y=ma,
-                        name=f'{col} growth (MA)',
-                        line=dict(color=colors['view']),
-                        mode='lines'
+                        name=f"{col} growth (MA)",
+                        line=dict(color=colors["view"]),
+                        mode="lines",
                     ),
                     secondary_y=True,
                 )
@@ -210,9 +218,9 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=ma,
-                        name=f'{col} growth (MA)',
+                        name=f"{col} growth (MA)",
                         line=dict(color=colors[col]),
-                        mode='lines'
+                        mode="lines",
                     ),
                     secondary_y=False,
                 )
@@ -222,37 +230,37 @@ if len(current) > 0:
 
         # Update y-axis ranges considering both datasets
         fig2.update_yaxes(
-            range=[min(current_min, view_min / 10), max(current_max, view_max / 10)], 
-            secondary_y=False
+            range=[min(current_min, view_min / 10), max(current_max, view_max / 10)],
+            secondary_y=False,
         )
         fig2.update_yaxes(
-            range=[min(current_min * 10, view_min), max(current_max * 10, view_max)], 
-            secondary_y=True
+            range=[min(current_min * 10, view_min), max(current_max * 10, view_max)],
+            secondary_y=True,
         )
 
         fig2.update_layout(
-            title='Growth (Derivative) Over Time',
-            xaxis_title='Date/Time',
-            yaxis_title='Growth',
-            hovermode='x unified'
+            title="Growth (Derivative) Over Time",
+            xaxis_title="Date/Time",
+            yaxis_title="Growth",
+            hovermode="x unified",
         )
         st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info(f"No {table_type.lower()} data available for this video yet.")
-        
+
 else:
     priority_options = {
         "N/A": None,
-        "Every minute": 1, 
+        "Every minute": 1,
         "Every 15 minutes": 15,
-        "Every hour": 60
+        "Every hour": 60,
     }
 
     priority = st.selectbox(
         "Update frequency",
         options=list(priority_options.keys()),
         index=0,
-        help="How often to automatically check for video updates"
+        help="How often to automatically check for video updates",
     )
 
     # Add priority to video_data dict:
