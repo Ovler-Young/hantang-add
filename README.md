@@ -19,7 +19,7 @@ password = "your_password"
 
    仓库是 `icedata-top/hantang-add`
 
-   注意 `Main file path` 为 `src\hantang-add\add_video.py`
+   注意 `Main file path` 为 `src\hantang_add\add_video.py`
 
    可以自己修改App Url，默认是不公开的。
 
@@ -43,7 +43,7 @@ password = "your_password"
 3. 在对的venv里，运行：
 
     ```shell
-    streamlit run app.py
+    streamlit run src/hantang_add/add_video.py
     ```
 
     它会自动打开浏览器，访问 `http://localhost:8501`。
