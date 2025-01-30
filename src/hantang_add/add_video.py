@@ -204,7 +204,10 @@ if len(current) > 0:
         for col in plot_df.columns:
             diff = plot_df[col].diff().fillna(0)
             rate = diff / time_diff.replace(0, 1)
-            ma = rate.rolling(window=6).quantile(0.5).interpolate()
+            if table_type == "Minute":
+                ma = rate.rolling(window=6, min_periods=1).quantile(0.5).interpolate()
+            else:
+                ma = rate
             if col == "view":
                 fig2.add_trace(
                     go.Scatter(
