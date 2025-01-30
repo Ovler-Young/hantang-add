@@ -196,15 +196,15 @@ if len(current) > 0:
         view_min = float("inf")
 
         for col in plot_df.columns:
-            diff = plot_df[col].diff().interpolate()
-            ma = diff.rolling(window=5).mean()
+            diff = plot_df[col].diff().fillna(0)            
+            ma = diff.rolling(window=6).quantile(0.5).interpolate()
 
             if col == "view":
                 fig2.add_trace(
                     go.Scatter(
                         x=plot_df.index,
                         y=ma,
-                        name=f"{col} growth (MA)",
+                        name=f"{col} growth",
                         line=dict(color=colors["view"]),
                         mode="lines",
                     ),
@@ -218,7 +218,7 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=ma,
-                        name=f"{col} growth (MA)",
+                        name=f"{col} growth",
                         line=dict(color=colors[col]),
                         mode="lines",
                     ),
