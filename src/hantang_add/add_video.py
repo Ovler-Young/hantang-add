@@ -95,17 +95,42 @@ video_data = {
     "user_id": video_info["data"]["View"]["owner"]["mid"],
 }
 
-st.table(video_data)
-
 conn = st.connection("mysql", type="sql")
 query = "SELECT * FROM video_static WHERE aid = :aid OR bvid = :bvid"
 current = conn.query(
     query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
 )
 if len(current) > 0:
-    st.success("Video already exists in database.")
-    st.table(current.T)
+    st.success("Video already exists in database:")
+    df_video_data = pd.DataFrame([video_data])
+    df_video_data["priority"] = current.iloc[0]["priority"]
+    comparison = pd.concat([current.iloc[0], df_video_data.iloc[0]], axis=1)
+    comparison.columns = ['Current', 'New']
+    st.table(comparison)
+    # if different, update the video data after asking
+    if not comparison["Current"].equals(comparison["New"]):
+        st.warning("Video data is different from the current record.")
+        st.markdown("Click the button below to update the video data.")
+        different_fields = comparison[comparison["Current"] != comparison["New"]].index
+        st.write("Different fields:")
+        st.write(different_fields)
+        if st.button("Update Video Data"):
+            dbsession = conn.session
+            dbsession.execute(
+                text(
+                    "UPDATE video_static SET bvid = :bvid, pubdate = :pubdate, title = :title, description = :description, tag = :tag, pic = :pic, type_id = :type_id, user_id = :user_id, priority = :priority WHERE aid = :aid"
+                ),
+                video_data,
+            )
+            dbsession.commit()
+            st.success("Video data fixed successfully!")
+            time.sleep(10)
+            st.rerun()
+else:
+    st.write("New Video:")
+    st.table(video_data)
 
+if len(current) > 0:
     priority = current.iloc[0]["priority"]
     aid = current.iloc[0]["aid"]
 
