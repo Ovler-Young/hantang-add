@@ -89,7 +89,7 @@ video_data = {
     "title": video_info["data"]["View"]["title"],
     "description": video_info["data"]["View"]["desc"],
     "tag": ";".join([tag["tag_name"] for tag in video_info["data"]["Tags"]]),
-    "pic": video_info["data"]["View"]["pic"].replace("http://", "//"),
+    "pic": video_info["data"]["View"]["pic"],
     "type_id": video_info["data"]["View"]["tid"],
     "user_id": video_info["data"]["View"]["owner"]["mid"],
 }
