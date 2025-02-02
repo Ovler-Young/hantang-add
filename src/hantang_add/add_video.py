@@ -109,6 +109,33 @@ if len(current) > 0:
     priority = current.iloc[0]["priority"]
     aid = current.iloc[0]["aid"]
 
+    # Add priority change UI
+    priority_options = {
+        "N/A": None,
+        "Every minute": 1,
+        "Every 15 minutes": 15,
+        "Every hour": 60,
+    }
+
+    new_priority = st.selectbox(
+        "Change update frequency",
+        options=list(priority_options.keys()),
+        index=list(priority_options.values()).index(priority),
+        help="How often to automatically check for video updates",
+    )
+
+    if new_priority and priority_options[new_priority] != priority:
+        if st.button("Update Priority"):
+            dbsession = conn.session
+            dbsession.execute(
+                text("UPDATE video_static SET priority = :priority WHERE aid = :aid"),
+                {"priority": priority_options[new_priority], "aid": aid},
+            )
+            dbsession.commit()
+            st.success("Priority updated successfully!")
+            time.sleep(1)
+            st.rerun()
+
     if priority is not None:
         query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time LIMIT 1000"
         table_type = "Minute"
