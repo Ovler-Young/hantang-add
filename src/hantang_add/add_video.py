@@ -9,6 +9,7 @@ import re
 import time
 from wbi import encWbi, getWbiKeys
 
+st.set_page_config(layout="wide")
 st.header("Add Video")
 
 if "clear_form" in st.session_state:
