@@ -178,7 +178,7 @@ if len(current) > 0:
         else:
             time_diff = plot_df.index.to_series().diff().dt.days
 
-        time_diff = time_diff.fillna(method='bfill')        
+        time_diff = time_diff.bfill()        
         # Create Plotly figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
