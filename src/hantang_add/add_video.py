@@ -80,7 +80,7 @@ response = requests.get(
 
 video_info = response.json()
 
-# display video info
+# display video title
 st.header(video_info["data"]["View"]["title"])
 
 video_data = {
@@ -105,7 +105,7 @@ if len(current) > 0:
     df_video_data = pd.DataFrame([video_data])
     df_video_data["priority"] = current.iloc[0]["priority"]
     comparison = pd.concat([current.iloc[0], df_video_data.iloc[0]], axis=1)
-    comparison.columns = ['Current', 'New']
+    comparison.columns = ["Current", "New"]
     st.table(comparison)
     # if different, update the video data after asking
     if not comparison["Current"].equals(comparison["New"]):
@@ -162,15 +162,32 @@ if len(current) > 0:
             time.sleep(1)
             st.rerun()
 
+    # If priority is set, let user choose data source; otherwise default to Dynamic.
     if priority is not None:
-        query = "SELECT * FROM video_minute WHERE aid = :aid ORDER BY time LIMIT 1000"
-        table_type = "Minute"
+        data_source = st.radio("Select data source", options=["Minute", "Dynamic"])
     else:
-        query = "SELECT * FROM video_dynamic WHERE aid = :aid ORDER BY record_date LIMIT 1000"
-        table_type = "Dynamic"
+        data_source = "Dynamic"
 
-    df = conn.query(query, params={"aid": aid}, ttl=0)
+    # Fix min_date and max_date conversion
+    min_date = pd.Timestamp.fromtimestamp(max(
+        current.iloc[0]['pubdate'],
+        (pd.Timestamp.now() - pd.Timedelta(days=3655)).timestamp()
+    )).date()
+    max_date = pd.Timestamp.now().date()
+    start_date, end_date = st.date_input("Select date range", [min_date, max_date])
 
+    if data_source == "Minute":
+        query_data = (
+            "SELECT * FROM video_minute WHERE aid = :aid AND time BETWEEN :start_date AND :end_date ORDER BY time"
+        )
+    else:
+        # Limit rows to 3655 (e.g. near ten years of daily data)
+        query_data = "SELECT * FROM video_dynamic WHERE aid = :aid AND record_date BETWEEN :start_date AND :end_date ORDER BY record_date"
+
+    df = conn.query(query_data, params={"aid": aid, "start_date": start_date, "end_date": end_date}, ttl=0)
+
+    # Process time column and rename table type based on data source
+    table_type = data_source
     if not df.empty:
         # Convert timestamp/date to datetime
         if table_type == "Minute":
@@ -204,7 +221,7 @@ if len(current) > 0:
         else:
             time_diff = plot_df.index.to_series().diff().dt.days
 
-        time_diff = time_diff.bfill()        
+        time_diff = time_diff.bfill()
         # Create Plotly figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
