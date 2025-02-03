@@ -115,6 +115,7 @@ if len(current) > 0:
         st.write("Different fields:")
         st.write(different_fields)
         if st.button("Update Video Data"):
+            video_data["priority"] = current.iloc[0]["priority"]
             dbsession = conn.session
             dbsession.execute(
                 text(
