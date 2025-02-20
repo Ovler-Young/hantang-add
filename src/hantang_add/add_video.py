@@ -182,7 +182,7 @@ if len(current) > 0:
         )
     else:
         # Limit rows to 3655 (e.g. near ten years of daily data)
-        query_data = "SELECT * FROM video_dynamic WHERE aid = :aid AND record_date BETWEEN :start_date AND :end_date ORDER BY record_date"
+        query_data = "SELECT * FROM video_daily WHERE aid = :aid AND record_date BETWEEN :start_date AND :end_date ORDER BY record_date"
 
     df = conn.query(query_data, params={"aid": aid, "start_date": start_date, "end_date": end_date}, ttl=0)
 
