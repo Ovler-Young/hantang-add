@@ -15,23 +15,21 @@ from utils import word_level_diff
 
 
 st.set_page_config(layout="wide")
-st.header("Add Video")
+st.header("添加视频")
 
 if "clear_form" in st.session_state:
     st.session_state.video_id = ""
     del st.session_state.clear_form
 
 video_id_input = st.text_input(
-    "Video ID",
-    placeholder="format: BV号 (BVxxxxxxxxxx) / AV号 (av123456 or 123456) / URL",
+    "视频ID",
+    placeholder="格式: BV号 (BVxxxxxxxxxx) / AV号 (av123456 or 123456) / URL",
     key="video_id",
     value=st.session_state.get("video_id", ""),
 )
 
 if not video_id_input:
-    st.markdown(
-        "Please input a valid BV or AV ID. And don't forget to press enter to submit."
-    )
+    st.markdown("请输入有效的BV或AV号，输入后按回车键提交。")
     st.stop()
 
 # Strip whitespace
@@ -57,7 +55,7 @@ elif video_id_input.lower().startswith("av") and video_id_input[2:].isdigit():
     param_key = "aid"
     player_id = f"aid={video_id}"
 else:
-    st.warning("Invalid Video ID. Please enter a valid BV ID or AV ID.")
+    st.warning("无效的视频ID，请输入有效的BV号或AV号。")
     st.stop()
 
 components.iframe(f"https://player.bilibili.com/player.html?{player_id}", height=400)
@@ -111,7 +109,7 @@ current = conn.query(
 )
 
 if len(current) > 0:
-    st.success("Video already exists in database")
+    st.success("视频已存在于数据库中")
 
     # Preserve priority from existing record
     video_data["priority"] = current.iloc[0]["priority"]
@@ -141,7 +139,7 @@ if len(current) > 0:
     display_df.columns = ["Value"]
 
     if has_changes:
-        st.warning("Detected changes - auto-updating...")
+        st.warning("检测到变更 - 正在自动更新...")
         st.markdown(display_df.to_markdown())
 
         # Automatically update the database
@@ -153,13 +151,13 @@ if len(current) > 0:
             video_data,
         )
         dbsession.commit()
-        st.success("Video data updated successfully!")
+        st.success("视频数据更新成功！")
     else:
-        st.info("Video data is up to date")
+        st.info("视频数据已是最新")
         st.markdown(display_df.to_markdown())
 
 else:
-    st.write("New Video:")
+    st.write("新视频：")
     st.table(video_data)
 
 if len(current) > 0:
@@ -168,34 +166,36 @@ if len(current) > 0:
 
     # Add priority change UI
     priority_options = {
-        "N/A": None,
-        "Every minute": 1,
-        "Every 15 minutes": 15,
-        "Every hour": 60,
+        "不自动更新": None,
+        "每分钟": 1,
+        "每15分钟": 15,
+        "每小时": 60,
     }
 
     new_priority = st.selectbox(
-        "Change update frequency",
+        "更改更新频率",
         options=list(priority_options.keys()),
         index=list(priority_options.values()).index(priority),
-        help="How often to automatically check for video updates",
+        help="自动检查视频更新的频率",
     )
 
     if new_priority and priority_options[new_priority] != priority:
-        if st.button("Update Priority"):
+        if st.button("更新优先级"):
             dbsession = conn.session
             dbsession.execute(
                 text("UPDATE video_static SET priority = :priority WHERE aid = :aid"),
                 {"priority": priority_options[new_priority], "aid": aid},
             )
             dbsession.commit()
-            st.success("Priority updated successfully!")
+            st.success("优先级更新成功！")
             time.sleep(1)
             st.rerun()
 
     # If priority is set, let user choose data source; otherwise default to Dynamic.
     if priority is not None:
-        data_source = st.radio("Select data source", options=["Minute", "Dynamic"])
+        data_source = st.radio("选择数据源", options=["分钟", "每日汇总"])
+        # Map Chinese to English for internal use
+        data_source = "Minute" if data_source == "分钟" else "Dynamic"
     else:
         data_source = "Dynamic"
 
@@ -207,7 +207,7 @@ if len(current) > 0:
         )
     ).date()
     max_date = pd.Timestamp.now().date()
-    start_date, end_date = st.date_input("Select date range", [min_date, max_date])
+    start_date, end_date = st.date_input("选择日期范围", [min_date, max_date])
 
     if data_source == "Minute":
         query_data = "SELECT * FROM video_minute WHERE aid = :aid AND time BETWEEN :start_date AND :end_date ORDER BY time"
@@ -260,6 +260,31 @@ if len(current) > 0:
         # Create Plotly figure with secondary y-axis
         fig = make_subplots(specs=[[{"secondary_y": True}]])
 
+        # Field names in Chinese
+        field_names = {
+            "view": "播放",
+            "like": "点赞",
+            "favorite": "收藏",
+            "danmaku": "弹幕",
+            "reply": "评论",
+            "share": "分享",
+        }
+
+        # Add field selection checkboxes
+        selected_fields = st.multiselect(
+            "选择要显示的字段",
+            options=list(field_names.keys()),
+            default=["view", "like", "favorite"],
+            format_func=lambda x: field_names[x],
+        )
+
+        # Filter plot_df based on selected fields
+        if selected_fields:
+            plot_df = plot_df[selected_fields]
+        else:
+            st.warning("请至少选择一个字段")
+            st.stop()
+
         colors = {
             "favorite": "#1f77b4",
             "danmaku": "#ff7f0e",
@@ -275,7 +300,7 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=plot_df["view"],
-                        name="view",
+                        name=field_names["view"],
                         line=dict(color=colors["view"], shape="spline"),
                         mode="lines",
                     ),
@@ -286,7 +311,7 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=plot_df[col],
-                        name=col,
+                        name=field_names[col],
                         line=dict(color=colors[col], shape="spline"),
                         mode="lines",
                     ),
@@ -318,7 +343,7 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=rate,
-                        name=f"{col} raw",
+                        name=f"{field_names[col]} 原始",
                         marker=dict(
                             color=colors["view"],
                             size=2,  # 点的大小
@@ -333,7 +358,7 @@ if len(current) > 0:
                     go.Scatter(
                         x=plot_df.index,
                         y=ma,
-                        name=f"{col} growth",
+                        name=f"{field_names[col]} 增长",
                         line=dict(color=colors["view"]),
                         mode="lines",
                     ),
@@ -378,35 +403,42 @@ if len(current) > 0:
             secondary_y=True,
         )
 
+        # Determine unit based on data source
+        if table_type == "Minute":
+            unit_text = "每分钟"
+        else:
+            unit_text = "每天"
+
         fig2.update_layout(
-            title="Growth (Derivative) Over Time",
-            xaxis_title="Date/Time",
-            yaxis_title="Growth",
+            title="增长量随时间变化",
+            xaxis_title="日期/时间",
+            yaxis_title=f"增长量 ({unit_text})",
             hovermode="x unified",
         )
         st.plotly_chart(fig2, use_container_width=True)
     else:
-        st.info(f"No {table_type.lower()} data available for this video yet.")
+        data_type_text = "分钟" if table_type == "Minute" else "每日"
+        st.info(f"该视频暂无{data_type_text}数据。")
 
 else:
     priority_options = {
-        "N/A": None,
-        "Every minute": 1,
-        "Every 15 minutes": 15,
-        "Every hour": 60,
+        "每日": None,
+        "每分钟": 1,
+        "每15分钟": 15,
+        "每小时": 60,
     }
 
     priority = st.selectbox(
-        "Update frequency",
+        "更新频率",
         options=list(priority_options.keys()),
         index=0,
-        help="How often to automatically check for video updates",
+        help="自动检查视频更新的频率",
     )
 
     # Add priority to video_data dict:
     video_data["priority"] = priority_options[priority]
 
-    add_video = st.button("Add Video", key="add_video")
+    add_video = st.button("添加视频", key="add_video")
 
     if not add_video:
         st.stop()
@@ -424,7 +456,7 @@ else:
     current = conn.query(
         query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
     )
-    st.success("Video added successfully.")
+    st.success("视频添加成功。")
     st.table(current.T)
 
     # Reset input fields by updating session state
@@ -432,12 +464,12 @@ else:
 
     col1, col2 = st.columns([4, 1], vertical_alignment="bottom")
     with col2:
-        if st.button("Refresh now"):
+        if st.button("立即刷新"):
             st.stop()
     with col1:
         with st.empty():
             for seconds in range(10):
-                st.success(f"⏳ Page will refresh in {10 - seconds} seconds.")
+                st.success(f"⏳ 页面将在 {10 - seconds} 秒后刷新。")
                 time.sleep(1)
 
     st.rerun()
