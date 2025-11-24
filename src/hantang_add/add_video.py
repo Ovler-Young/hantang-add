@@ -11,58 +11,54 @@ import math
 import random
 import secrets
 from wbi import encWbi, getWbiKeys
+from utils import word_level_diff
+
 
 st.set_page_config(layout="wide")
 st.header("Add Video")
 
 if "clear_form" in st.session_state:
-    st.session_state.bv_id = ""
-    st.session_state.av_id = ""
+    st.session_state.video_id = ""
     del st.session_state.clear_form
 
-col1, col2 = st.columns(2)
+video_id_input = st.text_input(
+    "Video ID",
+    placeholder="format: BV号 (BVxxxxxxxxxx) / AV号 (av123456 or 123456) / URL",
+    key="video_id",
+    value=st.session_state.get("video_id", ""),
+)
 
-with col1:
-    bv_id = st.text_input(
-        "Video BV ID",
-        placeholder="format: BV[0-9a-zA-Z]{10} URL also works",
-        key="bv_id",
-        value=st.session_state.get("bv_id", ""),
-    )
-
-with col2:
-    av_id = st.text_input(
-        "Video AV ID",
-        placeholder="format: [0-9]+ / av[0-9]+ URL also works",
-        key="av_id",
-        value=st.session_state.get("av_id", ""),
-    )
-
-if not bv_id and not av_id:
+if not video_id_input:
     st.markdown(
         "Please input a valid BV or AV ID. And don't forget to press enter to submit."
     )
     st.stop()
 
-# Handle BV ID input
-if bv_id:
-    bv_match = re.search(r"BV[0-9a-zA-Z]{10}", bv_id)
-    if bv_match:
-        video_id = bv_match.group(0)
-        param_key = "bvid"
-        player_id = f"bvid={video_id}"
-    else:
-        st.warning("Invalid BV ID.")
-        st.stop()
-elif av_id:
-    av_match = re.search(r"[0-9]+", av_id.lower())
-    if av_match:
-        video_id = av_match.group(0)
-        param_key = "aid"
-        player_id = f"aid={video_id}"
-    else:
-        st.warning("Invalid AV ID.")
-        st.stop()
+# Strip whitespace
+video_id_input = video_id_input.strip()
+
+# Determine if it's AV or BV ID
+# Priority: Check for BV ID pattern first, then AV ID patterns
+bv_match = re.search(r"BV[0-9a-zA-Z]{10}", video_id_input)
+
+if bv_match:
+    # BV ID detected
+    video_id = bv_match.group(0)
+    param_key = "bvid"
+    player_id = f"bvid={video_id}"
+elif video_id_input.isdigit():
+    # Pure digits - AV ID
+    video_id = video_id_input
+    param_key = "aid"
+    player_id = f"aid={video_id}"
+elif video_id_input.lower().startswith("av") and video_id_input[2:].isdigit():
+    # AV prefix + digits - AV ID
+    video_id = video_id_input[2:]
+    param_key = "aid"
+    player_id = f"aid={video_id}"
+else:
+    st.warning("Invalid Video ID. Please enter a valid BV ID or AV ID.")
+    st.stop()
 
 components.iframe(f"https://player.bilibili.com/player.html?{player_id}", height=400)
 
@@ -113,33 +109,55 @@ query = "SELECT * FROM video_static WHERE aid = :aid OR bvid = :bvid"
 current = conn.query(
     query, params={"aid": video_data["aid"], "bvid": video_data["bvid"]}, ttl=0
 )
+
 if len(current) > 0:
-    st.success("Video already exists in database:")
-    df_video_data = pd.DataFrame([video_data])
-    df_video_data["priority"] = current.iloc[0]["priority"]
-    comparison = pd.concat([current.iloc[0], df_video_data.iloc[0]], axis=1)
-    comparison.columns = ["Current", "New"]
-    st.table(comparison)
-    # if different, update the video data after asking
-    if not comparison["Current"].equals(comparison["New"]):
-        st.warning("Video data is different from the current record.")
-        st.markdown("Click the button below to update the video data.")
-        different_fields = comparison[comparison["Current"] != comparison["New"]].index
-        st.write("Different fields:")
-        st.write(different_fields)
-        if st.button("Update Video Data"):
-            video_data["priority"] = current.iloc[0]["priority"]
-            dbsession = conn.session
-            dbsession.execute(
-                text(
-                    "UPDATE video_static SET bvid = :bvid, pubdate = :pubdate, title = :title, description = :description, tag = :tag, pic = :pic, type_id = :type_id, user_id = :user_id, priority = :priority WHERE aid = :aid"
-                ),
-                video_data,
-            )
-            dbsession.commit()
-            st.success("Video data fixed successfully!")
-            time.sleep(10)
-            st.rerun()
+    st.success("Video already exists in database")
+
+    # Preserve priority from existing record
+    video_data["priority"] = current.iloc[0]["priority"]
+
+    # Check for differences and build display table
+    current_record = current.iloc[0]
+    has_changes = False
+    display_data = {}
+
+    for field in video_data.keys():
+        current_value = current_record[field]
+        new_value = video_data[field]
+
+        # Skip priority field in comparison
+        if field == "priority":
+            display_data[field] = str(current_value)
+        elif current_value != new_value:
+            has_changes = True
+            # Show word-level diff for text fields
+            display_data[field] = word_level_diff(current_value, new_value)
+        else:
+            # No change, show value normally
+            display_data[field] = str(current_value)
+
+    # Display table with diff formatting
+    display_df = pd.DataFrame([display_data]).T
+    display_df.columns = ["Value"]
+
+    if has_changes:
+        st.warning("Detected changes - auto-updating...")
+        st.markdown(display_df.to_markdown())
+
+        # Automatically update the database
+        dbsession = conn.session
+        dbsession.execute(
+            text(
+                "UPDATE video_static SET bvid = :bvid, pubdate = :pubdate, title = :title, description = :description, tag = :tag, pic = :pic, type_id = :type_id, user_id = :user_id, priority = :priority WHERE aid = :aid"
+            ),
+            video_data,
+        )
+        dbsession.commit()
+        st.success("Video data updated successfully!")
+    else:
+        st.info("Video data is up to date")
+        st.markdown(display_df.to_markdown())
+
 else:
     st.write("New Video:")
     st.table(video_data)
