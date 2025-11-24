@@ -7,6 +7,9 @@ from sqlalchemy import text
 import requests
 import re
 import time
+import math
+import random
+import secrets
 from wbi import encWbi, getWbiKeys
 
 st.set_page_config(layout="wide")
@@ -72,10 +75,20 @@ headers = {
     "Referer": "https://www.bilibili.com/",
 }
 
+# Generate random DedeUserID and DedeUserID__ckMd5
+dede_user_id = math.floor(pow(random.random(), 4) * 1000000000000)
+dede_user_id_ck_md5 = secrets.token_hex(8)
+
+cookies = {
+    "DedeUserID": str(dede_user_id),
+    "DedeUserID__ckMd5": dede_user_id_ck_md5,
+}
+
 response = requests.get(
     "https://api.bilibili.com/x/web-interface/wbi/view/detail",
     params=signed_params,
     headers=headers,
+    cookies=cookies,
 )
 
 video_info = response.json()
@@ -169,22 +182,26 @@ if len(current) > 0:
         data_source = "Dynamic"
 
     # Fix min_date and max_date conversion
-    min_date = pd.Timestamp.fromtimestamp(max(
-        current.iloc[0]['pubdate'],
-        (pd.Timestamp.now() - pd.Timedelta(days=3655)).timestamp()
-    )).date()
+    min_date = pd.Timestamp.fromtimestamp(
+        max(
+            current.iloc[0]["pubdate"],
+            (pd.Timestamp.now() - pd.Timedelta(days=3655)).timestamp(),
+        )
+    ).date()
     max_date = pd.Timestamp.now().date()
     start_date, end_date = st.date_input("Select date range", [min_date, max_date])
 
     if data_source == "Minute":
-        query_data = (
-            "SELECT * FROM video_minute WHERE aid = :aid AND time BETWEEN :start_date AND :end_date ORDER BY time"
-        )
+        query_data = "SELECT * FROM video_minute WHERE aid = :aid AND time BETWEEN :start_date AND :end_date ORDER BY time"
     else:
         # Limit rows to 3655 (e.g. near ten years of daily data)
         query_data = "SELECT * FROM video_daily WHERE aid = :aid AND record_date BETWEEN :start_date AND :end_date ORDER BY record_date"
 
-    df = conn.query(query_data, params={"aid": aid, "start_date": start_date, "end_date": end_date}, ttl=0)
+    df = conn.query(
+        query_data,
+        params={"aid": aid, "start_date": start_date, "end_date": end_date},
+        ttl=0,
+    )
 
     # Process time column and rename table type based on data source
     table_type = data_source
@@ -285,9 +302,9 @@ if len(current) > 0:
                         y=rate,
                         name=f"{col} raw",
                         marker=dict(
-                            color=colors["view"], 
+                            color=colors["view"],
                             size=2,  # 点的大小
-                            opacity=0.8  # 半透明
+                            opacity=0.8,  # 半透明
                         ),
                         mode="markers",
                     ),
@@ -313,11 +330,7 @@ if len(current) > 0:
                         x=plot_df.index,
                         y=rate,
                         name=f"{col} raw",
-                        marker=dict(
-                            color=colors[col], 
-                            size=2,
-                            opacity=0.8
-                        ),
+                        marker=dict(color=colors[col], size=2, opacity=0.8),
                         mode="markers",
                     ),
                     secondary_y=False,
