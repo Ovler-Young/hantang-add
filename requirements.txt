@@ -50,4 +50,4 @@ typing-extensions==4.12.2
 tzdata==2024.2
 urllib3==2.2.3
 watchdog==6.0.0; platform_system != "Darwin"
-tabulate>=0.9.0
+tabulate==0.9.0
